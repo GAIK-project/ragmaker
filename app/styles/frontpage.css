@@ -1,0 +1,155 @@
+.container {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.titles {
+    color: white;
+}
+
+.welcome-section {
+    position: relative;
+    background: linear-gradient(270deg, #e66465 10%, #1F0322 70%, #e66465 90%); /* Color 1 -> Color 2 -> Color 1 */
+    background-size: 350% 350%;
+    animation: backgroundMove 60s linear infinite; /* Infinite smooth animation */
+    border-radius: 10px;
+    padding: 40px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.faded-shadow {
+    /*box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);  Horizontal, Vertical, Blur, Spread, Color */
+    box-shadow: rgba(0, 0, 0, 0.25) 0px 25px 50px -12px;
+  }
+
+@keyframes backgroundMove {
+    0% { background-position: 100% 50%; } /* Start at the far right */
+    50% { background-position: 0% 50%; } /* Move to the far left */
+    100% { background-position: 100% 50%; } /* Move back to the far right */
+}
+
+.welcome-text {
+    font-size: 24px;
+    font-weight: bold;
+    /* color: #00796b; */
+    color: white
+}
+
+.welcome-subtitle {
+    margin-top: 20px;
+    color: white;
+    font-size: 20px;
+}
+
+.centered-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+}
+
+.section {
+    width: 100%;
+    max-width: 600px;
+}
+
+.textarea {
+    width: 100%;
+    max-width: 100%;
+    min-height: 80px;
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 5px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    resize: none;
+}
+
+.link-field-container {
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 10px;
+    width: 100%;
+}
+
+.delete-button {
+    background: #00796b;
+    margin-left: 5px;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: 'pointer';
+    border-radius: 5px;
+}
+
+.add-button {
+    margin-top: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #00796b;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.button-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    width: 100%;
+    max-width: 600px;
+}
+
+.create-button {
+    padding: 15px 30px;
+    font-size: 18px;
+    background-color: #00796b;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    opacity: 1;
+    transition: opacity 0.3s;
+}
+
+.create-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Input field responsiveness */
+.input {
+    width: 100%; /* Ensures the input adapts to the container */
+    max-width: 100%; /* Prevents the input from exceeding the viewport width */
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    box-sizing: border-box; /* Includes padding and border in width calculation */
+}
+
+.error-message {
+    background-color: #1F0322;
+    padding: 20px;
+    margin: 10px;
+    border-radius: 5px;
+    color: #e66465;
+}
+
+/* Add responsive behavior */
+@media (max-width: 600px) {
+    .container {
+        padding: 10px; /* Reduce padding on small screens */
+    }
+}
