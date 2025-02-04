@@ -5,7 +5,7 @@ import { DataAPIClient } from '@datastax/astra-db-ts';
 
 const {
   ASTRA_DB_NAMESPACE,
-  ASTRA_DB_COLLECTION,
+  ASTRA_DB_EMBEDDING_COLLECTION,
   ASTRA_DB_API_ENDPOINT,
   ASTRA_DB_APPLICATION_TOKEN,
   OPENAI_API_KEY,
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     })
 
     try {
-      const collection = await db.collection(ASTRA_DB_COLLECTION);
+      const collection = await db.collection(ASTRA_DB_EMBEDDING_COLLECTION);
       const cursor = collection.find(null, {
         sort: {
           $vector: embedding.data[0].embedding,
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     };
 
     const result = await streamText({
-      model: openai2('gpt-4'),
+      model: openai2('gpt-4o'),
       messages: [template, ...messages],
     });
 

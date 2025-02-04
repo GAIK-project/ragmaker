@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendTestData } from "@/app/lib/testFunction";
+import { processLinks } from "@/app/lib/setupRag";
 
 export async function POST(req: NextRequest) {
     try {
@@ -11,13 +11,15 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Invalid request data" }, { status: 400 });
         }
 
-        // Simulating saving data (replace this with DB logic)
-        console.log("Received data:", { systemPrompt, links });
-        let testData : string = await sendTestData();
-        console.log("testdata: ", testData);
+        //start processing data
+        processLinks(links, systemPrompt).then(() => {
+            console.log("Data processing finished");
+        }).catch((error) => {
+            console.error("Error in background process:", error);
+        });
 
         // Send a success response
-        return NextResponse.json({ message: "Data saved successfully!" }, { status: 200 });
+        return NextResponse.json({ message: "Data saved successfully!" }, { status: 202 });
     } catch (error) {
         console.error("Error handling request:", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });

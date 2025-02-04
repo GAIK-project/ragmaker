@@ -6,7 +6,7 @@ import "dotenv/config";
 
 type SimilarityMetric = "dot_product" | "cosine" | "euclidean";
 
-const { ASTRA_DB_NAMESPACE, ASTRA_DB_COLLECTION, ASTRA_DB_PROMPT_COLLECTION, ASTRA_DB_API_ENDPOINT, ASTRA_DB_APPLICATION_TOKEN, OPENAI_API_KEY } = process.env;
+const { ASTRA_DB_NAMESPACE, ASTRA_DB_EMBEDDING_COLLECTION, ASTRA_DB_PROMPT_COLLECTION, ASTRA_DB_API_ENDPOINT, ASTRA_DB_APPLICATION_TOKEN, OPENAI_API_KEY } = process.env;
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 const client = new DataAPIClient(ASTRA_DB_APPLICATION_TOKEN);
@@ -19,13 +19,14 @@ const splitter = new RecursiveCharacterTextSplitter({
 
 const createCollection = async (similarityMetric: SimilarityMetric = "dot_product") => {
     try {
-        await db.createCollection(ASTRA_DB_COLLECTION, {
+        await db.createCollection(ASTRA_DB_EMBEDDING_COLLECTION, {
             vector: {
                 dimension: 1536,
                 metric: similarityMetric
             }
         });
         await db.createCollection(ASTRA_DB_PROMPT_COLLECTION);
+        console.log("Collections created");
         return true;
     } catch (error) {
         console.error("Error creating collection:", error);
@@ -53,7 +54,7 @@ const scrapePage = async (url: string) => {
 
 const loadData = async (links: string[]) => {
     try {
-        const collection = await db.collection(ASTRA_DB_COLLECTION);
+        const collection = await db.collection(ASTRA_DB_EMBEDDING_COLLECTION);
         for await (const url of links) {
             const content = await scrapePage(url);
             if (!content) continue;
@@ -70,7 +71,9 @@ const loadData = async (links: string[]) => {
                     text: chunk
                 });
             }
+            console.log("Link processed");
         }
+        await markTaskCompleted(); // Mark the process as completed
         return { message: "Data loaded successfully", success: true };
     } catch (error) {
         console.error("Error loading data:", error);
@@ -83,12 +86,27 @@ const saveSystemPrompt = async (systemPrompt: string) => {
         const promptCollection = await db.collection(ASTRA_DB_PROMPT_COLLECTION);
         await promptCollection.insertOne({
             prompt: systemPrompt,
-            timestamp: new Date()
+            timestamp: new Date(),
+            taskCompleted: false // Initially false
         });
         return { message: "System prompt saved successfully", success: true };
     } catch (error) {
         console.error("Error saving system prompt:", error);
         return { message: "Failed to save system prompt", success: false };
+    }
+};
+
+const markTaskCompleted = async () => {
+    try {
+        const promptCollection = await db.collection(ASTRA_DB_PROMPT_COLLECTION);
+        await promptCollection.updateOne(
+            {}, // Assuming there's only one prompt entry, update the latest one
+            { $set: { taskCompleted: true } },
+            { sort: { timestamp: -1 } } // Sort by latest timestamp to update the most recent entry
+        );
+        console.log("Task marked as completed.");
+    } catch (error) {
+        console.error("Error updating task status:", error);
     }
 };
 
@@ -99,6 +117,7 @@ export const processLinks = async (links: string[], systemPrompt: string) => {
     }
     const promptSaved = await saveSystemPrompt(systemPrompt);
     if (!promptSaved.success) {
+        console.error("Error saving prompt..retrying")
         return promptSaved;
     }
     return await loadData(links);

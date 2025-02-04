@@ -7,10 +7,12 @@ import AutoGrowingTextarea from "./components/AutoTextarea";
 import "./styles/frontpage.css";
 
 export default function Home() {
-    const [systemPrompt, setSystemPrompt] = useState("");
-    const [links, setLinks] = useState([""]);
-    const [isButtonEnabled, setIsButtonEnabled] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
+    const [systemPrompt, setSystemPrompt] = useState<string>("");
+    const [links, setLinks] = useState<string[]>([""]);
+    const [isButtonEnabled, setIsButtonEnabled] = useState<boolean>(false);
+    const [errorMessage, setErrorMessage] = useState<string>("");
+    const [loading, setLoading] = useState<boolean>(false);
+    const [processCompleted, setProcessCompleted] = useState<boolean>(false);
 
     const handleSystemPromptChange = (e) => {
         setSystemPrompt(e.target.value);
@@ -58,6 +60,9 @@ export default function Home() {
             links,
         };
 
+        setLoading(true);
+        setIsButtonEnabled(false);
+
         try {
             const response = await fetch("/api/saveModelData", {
                 method: "POST",
@@ -68,6 +73,7 @@ export default function Home() {
             });
 
             if (response.ok) {
+                checkStatus();
                 console.log("Data sent successfully!");
             } else {
                 console.error("Failed to send data.");
@@ -76,6 +82,18 @@ export default function Home() {
             console.error("Error occurred while sending data:", error);
         }
     };
+
+    async function checkStatus() {
+        const interval = setInterval(async () => {
+          const res = await fetch(`/api/checkTaskStatus`);
+          const data = await res.json();
+          setProcessCompleted(data.taskCompleted);
+    
+          if (data.taskCompleted === "completed") {
+            clearInterval(interval);
+          }
+        }, 20000); // Poll every 20 seconds
+    }
 
     return (
         <div className="container">
@@ -134,6 +152,13 @@ export default function Home() {
                                  </div>
                 }
 
+                {(loading &&
+                    <div className="loader-container">
+                        <p className="loader-text">Data is being collected the provided links and prepared to a form your AI assistant can understand... This might take 1-20 minutes depending on your data size</p>
+                        <div className="loader"></div>
+                    </div>
+                )}
+
                 <div className="button-container">
                     <button
                         className="create-button"
@@ -143,6 +168,22 @@ export default function Home() {
                         Create Your Own RAG Model
                     </button>
                 </div>
+
+                {(processCompleted &&
+                    <Link href="/completeragmodel">
+                        <button
+                            className="create-button"
+                        >
+                            See your new AI assistant!
+                        </button>
+                    </Link>
+                )}
+                    <button
+                        className="create-button"
+                        onClick={checkStatus}
+                    >
+                        check statyus
+                    </button>
             </div>
         </div>
     );
