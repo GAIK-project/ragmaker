@@ -17,15 +17,26 @@ const splitter = new RecursiveCharacterTextSplitter({
     chunkOverlap: 100
 });
 
-const createCollection = async (similarityMetric: SimilarityMetric = "dot_product") => {
+const createCollections = async (similarityMetric: SimilarityMetric, assistantName: string) => {
     try {
-        await db.createCollection(ASTRA_DB_EMBEDDING_COLLECTION, {
+
+        const colls = await db.listCollections();
+
+        const checkIfExists = (searchName: string): boolean => {
+            return colls.some(collection => collection.name === searchName);
+        };
+
+        await db.createCollection(`${assistantName}_${ASTRA_DB_EMBEDDING_COLLECTION}`, {
             vector: {
                 dimension: 1536,
                 metric: similarityMetric
             }
         });
-        await db.createCollection(ASTRA_DB_PROMPT_COLLECTION);
+
+        if(!checkIfExists(ASTRA_DB_PROMPT_COLLECTION)){
+            await db.createCollection(`${ASTRA_DB_PROMPT_COLLECTION}`);
+        }
+        
         console.log("Collections created");
         return true;
     } catch (error) {
@@ -52,9 +63,9 @@ const scrapePage = async (url: string) => {
     }
 };
 
-const loadData = async (links: string[]) => {
+const loadData = async (links: string[], assistantName: string) => {
     try {
-        const collection = await db.collection(ASTRA_DB_EMBEDDING_COLLECTION);
+        const collection = await db.collection(`${assistantName}_${ASTRA_DB_EMBEDDING_COLLECTION}`);
         for await (const url of links) {
             const content = await scrapePage(url);
             if (!content) continue;
@@ -75,7 +86,7 @@ const loadData = async (links: string[]) => {
             }
             console.log("Link processed");
         }
-        await markTaskCompleted(); // Mark the process as completed
+        await markTaskCompleted(assistantName); // Mark the process as completed
         return { message: "Data loaded successfully", success: true };
     } catch (error) {
         console.error("Error loading data:", error);
@@ -85,7 +96,7 @@ const loadData = async (links: string[]) => {
 
 const saveSystemPrompt = async (assistantName : string, systemPrompt: string) => {
     try {
-        const promptCollection = await db.collection(ASTRA_DB_PROMPT_COLLECTION);
+        const promptCollection = await db.collection(`${ASTRA_DB_PROMPT_COLLECTION}`);
         await promptCollection.insertOne({
             prompt: systemPrompt,
             timestamp: new Date(),
@@ -99,13 +110,12 @@ const saveSystemPrompt = async (assistantName : string, systemPrompt: string) =>
     }
 };
 
-const markTaskCompleted = async () => {
+const markTaskCompleted = async (assistantName: string) => {
     try {
-        const promptCollection = await db.collection(ASTRA_DB_PROMPT_COLLECTION);
+        const promptCollection = await db.collection(`${ASTRA_DB_PROMPT_COLLECTION}`);
         await promptCollection.updateOne(
-            {}, // Assuming there's only one prompt entry, update the latest one
-            { $set: { taskCompleted: true } },
-            { sort: { timestamp: -1 } } // Sort by latest timestamp to update the most recent entry
+            { assistantName : assistantName },
+            { $set: { taskCompleted: true } }
         );
         console.log("Task marked as completed.");
     } catch (error) {
@@ -114,14 +124,14 @@ const markTaskCompleted = async () => {
 };
 
 export const processLinks = async (assistantName : string, links: string[], systemPrompt: string) => {
-    const collectionCreated = await createCollection();
-    if (!collectionCreated) {
-        return { message: "Failed to create collection", success: false };
+    const collectionsCreated = await createCollections("dot_product", assistantName);
+    if (!collectionsCreated) {
+        return { message: "Failed to create collections", success: false };
     }
     const promptSaved = await saveSystemPrompt(assistantName, systemPrompt);
     if (!promptSaved.success) {
         console.error("Error saving prompt..retrying")
         return promptSaved;
     }
-    return await loadData(links);
+    return await loadData(links, assistantName);
 };

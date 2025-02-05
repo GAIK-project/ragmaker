@@ -103,25 +103,33 @@ export default function Home() {
     };
 
     async function checkUniqueName(name : string) {
-        const res = await fetch(`/api/checkUniqueName?name=${name}`);
+        console.log("Checking name: ", name);
+        const res = await fetch(`/api/checkUniqueName?assistantId=${name}`);
         const data = await res.json();
 
         if(data.unique){
+            console.log("Name already exists");
             return true;
         }
+        console.log("Name is free to take");
         return false;
     }
 
     async function checkStatus() {
         const interval = setInterval(async () => {
-          const res = await fetch(`/api/checkTaskStatus`);
+          const res = await fetch(`/api/checkTaskStatus?assistantId=${assistantName}`);
           const data = await res.json();
           setProcessCompleted(data.taskCompleted);
     
           if (data.taskCompleted) {
             clearInterval(interval);
           }
-        }, 20000); // Poll every 20 seconds
+        }, 10000); // Poll every 10 seconds
+    }
+
+    async function testDb() {
+        const res = await fetch(`/api/testDb`);
+        const data = await res.json();
     }
 
     return (
@@ -211,7 +219,7 @@ export default function Home() {
                 </div>
 
                 {(processCompleted &&
-                    <Link href="/completeragmodel">
+                    <Link href={`/completeragmodel?assistantId=${assistantName}`}>
                         <button
                             className="create-button"
                         >
@@ -219,12 +227,12 @@ export default function Home() {
                         </button>
                     </Link>
                 )}
-                    {/* <button
+                    <button
                         className="create-button"
-                        onClick={checkStatus}
+                        onClick={() => checkStatus()}
                     >
-                        check statyus
-                    </button> */}
+                        test
+                    </button>
             </div>
         </div>
     );

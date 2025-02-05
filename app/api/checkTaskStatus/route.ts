@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DataAPIClient } from "@datastax/astra-db-ts";
 import "dotenv/config";
+import { formatDbId } from "@/app/lib/formatDbId";
 
 const { ASTRA_DB_NAMESPACE, ASTRA_DB_PROMPT_COLLECTION, ASTRA_DB_API_ENDPOINT, ASTRA_DB_APPLICATION_TOKEN } = process.env;
 
@@ -10,13 +11,24 @@ const db = client.db(ASTRA_DB_API_ENDPOINT, { namespace: ASTRA_DB_NAMESPACE });
 export async function GET(req: NextRequest) {
     try {
         // const colls = await db.listCollections();
+
         // console.log(colls);
 
-        const promptCollection = await db.collection(ASTRA_DB_PROMPT_COLLECTION);
+        const { searchParams } = new URL(req.url);
+        const assistantId = searchParams.get("assistantId");
 
-        // Fetch the latest system prompt entry
-        // const latestPrompt = await promptCollection.findOne({}, { sort: { timestamp: -1 } });
-        const latestPrompt = await promptCollection.findOne({ taskCompleted : true });
+        let newName : string = formatDbId(assistantId).toString().trim();
+
+        const promptCollection = db.collection(ASTRA_DB_PROMPT_COLLECTION);
+
+        // let juu = await promptCollection.estimatedDocumentCount();
+        // console.log(juu);
+
+        const docs = await promptCollection.find({}).toArray();
+
+        let latestPrompt = docs.find(entry => entry.assistantName === newName);
+
+        // const latestPrompt = await promptCollection.findOne({ assistantName : newName }); //this did not work, probably if data is not uniform it cant fetch one
 
         if (!latestPrompt) {
             return NextResponse.json({ message: "No prompt found", taskCompleted: false }, { status: 404 });

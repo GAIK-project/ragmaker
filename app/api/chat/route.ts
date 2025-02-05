@@ -2,6 +2,7 @@ import { openai as openai2 } from '@ai-sdk/openai';
 import OpenAI from "openai";
 import { streamText } from 'ai';
 import { DataAPIClient } from '@datastax/astra-db-ts';
+import { formatDbId } from '@/app/lib/formatDbId';
 
 const {
   ASTRA_DB_NAMESPACE,
@@ -22,8 +23,10 @@ const db = client.db(ASTRA_DB_API_ENDPOINT, {
 
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
+    const { messages, assistantId } = await req.json();
     const latestMessage = messages[messages.length - 1]?.content;
+
+    let newName : string = formatDbId(assistantId);
 
     let docContext = '';
 
@@ -34,7 +37,7 @@ export async function POST(req: Request) {
     })
 
     try {
-      const collection = await db.collection(ASTRA_DB_EMBEDDING_COLLECTION);
+      const collection = await db.collection(`${newName}_${ASTRA_DB_EMBEDDING_COLLECTION}`);
       const cursor = collection.find(null, {
         sort: {
           $vector: embedding.data[0].embedding,

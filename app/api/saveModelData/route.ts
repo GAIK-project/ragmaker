@@ -1,16 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processLinks } from "@/app/lib/setupRag";
-
-const formatDbId = (input: string): string => {
-    // Remove all characters except letters, numbers, spaces, and underscores
-    let sanitized = input.replace(/[^a-zA-Z0-9 _]/g, "");
-  
-    // Replace spaces with underscores
-    sanitized = sanitized.replace(/\s+/g, "_");
-  
-    // Capitalize the first letter
-    return sanitized.charAt(0).toUpperCase() + sanitized.slice(1);
-};
+import { formatDbId } from "@/app/lib/formatDbId";
 
 export async function POST(req: NextRequest) {
     try {
@@ -31,7 +21,7 @@ export async function POST(req: NextRequest) {
             console.error("Error in background process:", error);
         });
 
-        // Send a success response
+        // Send a success response without waiting for process
         return NextResponse.json({ message: "Data saved successfully!" }, { status: 202 });
     } catch (error) {
         console.error("Error handling request:", error);

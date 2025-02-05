@@ -4,11 +4,33 @@ import logo from './../assets/naama.png'
 import { useChat } from "ai/react"
 import { Message } from "ai"
 import Bubble from "./../components/Bubble"
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import LoadingBubble from "./../components/LoadingBubble"
 import PromptSuggestionRow from "./../components/PromptSuggestionRow"
 
+interface AssistantData {
+    assistantName: string,
+    prompt: string,
+    _id: any,
+    timestamp: any,
+    taskCompleted: boolean
+}
+
 const Home = () => {
-    const { append, isLoading, messages, input, handleInputChange, handleSubmit } = useChat()
+    const [assistantData, setAssistantData] = useState<null | AssistantData>(null);
+    const searchParams = useSearchParams();
+    const assistantId = searchParams.get("assistantId");
+
+    useEffect(() => {
+        if (assistantId) {
+            fetch(`/api/getAssistant?assistantId=${assistantId}`)
+                .then((res) => res.json())
+                .then((data) => setAssistantData(data.data));
+        }
+    }, [assistantId]);
+
+    const { append, isLoading, messages, input, handleInputChange, handleSubmit } = useChat({ body: { assistantId } })
 
     const noMessages = !messages || messages.length === 0;
 
@@ -28,7 +50,7 @@ const Home = () => {
                 {noMessages ? (
                     <>
                         <p className="starter-text">
-                            The ultimate place for your f1 knowledge
+                            {assistantData ? assistantData.assistantName : "Test assistant"}
                         </p>
                         <br/>
                         <PromptSuggestionRow onPromptClick={handlePrompt}/>
