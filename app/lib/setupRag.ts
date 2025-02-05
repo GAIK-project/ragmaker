@@ -70,6 +70,8 @@ const loadData = async (links: string[]) => {
                     $vector: vector,
                     text: chunk
                 });
+                let currentChunk : string = chunk.slice(0, 20);
+                console.log("Datachunk processed: ", currentChunk);
             }
             console.log("Link processed");
         }
@@ -81,13 +83,14 @@ const loadData = async (links: string[]) => {
     }
 };
 
-const saveSystemPrompt = async (systemPrompt: string) => {
+const saveSystemPrompt = async (assistantName : string, systemPrompt: string) => {
     try {
         const promptCollection = await db.collection(ASTRA_DB_PROMPT_COLLECTION);
         await promptCollection.insertOne({
             prompt: systemPrompt,
             timestamp: new Date(),
-            taskCompleted: false // Initially false
+            taskCompleted: false, // Initially false
+            assistantName: assistantName
         });
         return { message: "System prompt saved successfully", success: true };
     } catch (error) {
@@ -110,12 +113,12 @@ const markTaskCompleted = async () => {
     }
 };
 
-export const processLinks = async (links: string[], systemPrompt: string) => {
+export const processLinks = async (assistantName : string, links: string[], systemPrompt: string) => {
     const collectionCreated = await createCollection();
     if (!collectionCreated) {
         return { message: "Failed to create collection", success: false };
     }
-    const promptSaved = await saveSystemPrompt(systemPrompt);
+    const promptSaved = await saveSystemPrompt(assistantName, systemPrompt);
     if (!promptSaved.success) {
         console.error("Error saving prompt..retrying")
         return promptSaved;

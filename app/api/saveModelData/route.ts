@@ -1,18 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processLinks } from "@/app/lib/setupRag";
 
+const formatDbId = (input: string): string => {
+    // Remove all characters except letters, numbers, spaces, and underscores
+    let sanitized = input.replace(/[^a-zA-Z0-9 _]/g, "");
+  
+    // Replace spaces with underscores
+    sanitized = sanitized.replace(/\s+/g, "_");
+  
+    // Capitalize the first letter
+    return sanitized.charAt(0).toUpperCase() + sanitized.slice(1);
+};
+
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { systemPrompt, links } = body;
+        const { assistantName, systemPrompt, links } = body;
 
         // Validate input
-        if (typeof systemPrompt !== "string" || !Array.isArray(links)) {
+        if (typeof systemPrompt !== "string" || !Array.isArray(links) || typeof assistantName !== "string") {
             return NextResponse.json({ error: "Invalid request data" }, { status: 400 });
         }
 
+        let newName : string = formatDbId(assistantName);
+
         //start processing data
-        processLinks(links, systemPrompt).then(() => {
+        processLinks(newName, links, systemPrompt).then(() => {
             console.log("Data processing finished");
         }).catch((error) => {
             console.error("Error in background process:", error);

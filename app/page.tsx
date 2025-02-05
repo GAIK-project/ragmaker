@@ -7,6 +7,7 @@ import AutoGrowingTextarea from "./components/AutoTextarea";
 import "./styles/frontpage.css";
 
 export default function Home() {
+    const [assistantName, setAssistantName] = useState<string>("");
     const [systemPrompt, setSystemPrompt] = useState<string>("");
     const [links, setLinks] = useState<string[]>([""]);
     const [isButtonEnabled, setIsButtonEnabled] = useState<boolean>(false);
@@ -19,18 +20,29 @@ export default function Home() {
         validateForm(e.target.value, links);
     };
 
-    const handleLinkChange = (index, value) => {
+    const handleLinkChange = (index : number, value : string) => {
         const updatedLinks = [...links];
         updatedLinks[index] = value;
         setLinks(updatedLinks);
         validateForm(systemPrompt, updatedLinks);
     };
 
+    const handleNameChange = (value : string) => {
+        setAssistantName(value);
+    };
+
     const addLinkField = () => {
         setLinks([...links, ""]);
     };
 
-    const validateForm = (prompt, linksArray) => {
+    const validateForm = (prompt : string, linksArray : string[]) => {
+
+        if (assistantName.trim() === "") {
+            setErrorMessage("Name for the assistant cannot be empty.");
+            setIsButtonEnabled(false);
+            return;
+        }
+
         if (prompt.trim() === "") {
             setErrorMessage("Instructions for the assistant cannot be empty.");
             setIsButtonEnabled(false);
@@ -55,7 +67,14 @@ export default function Home() {
     };
 
     const handleSubmit = async () => {
+        let check : boolean =  await checkUniqueName(assistantName);
+        if(check){
+            setErrorMessage("Assistant name already exists, please select a new one");
+            return;
+        }
+
         const payload = {
+            assistantName,
             systemPrompt,
             links,
         };
@@ -83,13 +102,23 @@ export default function Home() {
         }
     };
 
+    async function checkUniqueName(name : string) {
+        const res = await fetch(`/api/checkUniqueName?name=${name}`);
+        const data = await res.json();
+
+        if(data.unique){
+            return true;
+        }
+        return false;
+    }
+
     async function checkStatus() {
         const interval = setInterval(async () => {
           const res = await fetch(`/api/checkTaskStatus`);
           const data = await res.json();
           setProcessCompleted(data.taskCompleted);
     
-          if (data.taskCompleted === "completed") {
+          if (data.taskCompleted) {
             clearInterval(interval);
           }
         }, 20000); // Poll every 20 seconds
@@ -107,9 +136,21 @@ export default function Home() {
                 </div>
             </div>
 
+            <div className="section">
+                    <h2 className="titles">Name for your new assistant</h2>
+                    <input 
+                        className="input"
+                        type="text"
+                        maxLength={20}
+                        value={assistantName}
+                        onChange={(e) => handleNameChange(e.target.value)}
+                        placeholder="Formulasensei" 
+                    />
+                </div>
+
             <div className="centered-section">
                 <div className="section">
-                    <h2 className="titles">Instructions for your assistant</h2>
+                    <h2 className="titles">Instructions (system prompt)</h2>
                     <AutoGrowingTextarea value={systemPrompt} onChange={handleSystemPromptChange} placeholder='You are an AI assistant who knows everything about Formula One.'/>
                 </div>
 
@@ -154,7 +195,7 @@ export default function Home() {
 
                 {(loading &&
                     <div className="loader-container">
-                        <p className="loader-text">Data is being collected the provided links and prepared to a form your AI assistant can understand... This might take 1-20 minutes depending on your data size</p>
+                        <p className="loader-text">Data is being collected from the provided links and prepared to a form your AI assistant can understand... This might take 1-20 minutes depending on your data size</p>
                         <div className="loader"></div>
                     </div>
                 )}
@@ -178,12 +219,12 @@ export default function Home() {
                         </button>
                     </Link>
                 )}
-                    <button
+                    {/* <button
                         className="create-button"
                         onClick={checkStatus}
                     >
                         check statyus
-                    </button>
+                    </button> */}
             </div>
         </div>
     );
