@@ -229,7 +229,7 @@ export default function Home() {
                 )}
                     <button
                         className="create-button"
-                        onClick={() => checkStatus()}
+                        onClick={() => testDb()}
                     >
                         test
                     </button>

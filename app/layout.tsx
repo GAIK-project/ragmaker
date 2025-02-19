@@ -1,8 +1,8 @@
 import "./global.css"
 
 export const metadata = {
-    title: "f1GPT",
-    description: "The place for all of your f1 info"
+    title: "Ragmaker",
+    description: "Create your own AI assistant with Ragmaker"
 }
 
 const RootLayout = ({children}) => {
