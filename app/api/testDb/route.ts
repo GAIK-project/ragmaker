@@ -3,7 +3,7 @@ import { DataAPIClient } from "@datastax/astra-db-ts";
 import "dotenv/config";
 import { formatDbId } from "@/app/lib/formatDbId";
 import { scrapePage } from "@/app/lib/newScraping";
-import { scrapePage as scrapePage2 } from "@/app/lib/newScraping2";
+import { scrapePage as scrapePage2 } from "@/app/lib/autoScraper";
 
 const { ASTRA_DB_NAMESPACE, ASTRA_DB_PROMPT_COLLECTION, ASTRA_DB_API_ENDPOINT, ASTRA_DB_APPLICATION_TOKEN } = process.env;
 

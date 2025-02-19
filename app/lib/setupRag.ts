@@ -1,8 +1,8 @@
 import { DataAPIClient } from "@datastax/astra-db-ts";
-import { PuppeteerWebBaseLoader } from "langchain/document_loaders/web/puppeteer";
 import OpenAI from "openai";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import "dotenv/config";
+import { scrapePage } from "./autoScraper";
 
 type SimilarityMetric = "dot_product" | "cosine" | "euclidean";
 
@@ -42,24 +42,6 @@ const createCollections = async (similarityMetric: SimilarityMetric, assistantNa
     } catch (error) {
         console.error("Error creating collection:", error);
         return false;
-    }
-};
-
-const scrapePage = async (url: string) => {
-    try {
-        const loader = new PuppeteerWebBaseLoader(url, {
-            launchOptions: { headless: true },
-            gotoOptions: { waitUntil: "domcontentloaded" },
-            evaluate: async (page, browser) => {
-                const result = await page.evaluate(() => document.body.innerHTML);
-                await browser.close();
-                return result;
-            }
-        });
-        return (await loader.scrape())?.replace(/<[^>]*>?/gm, "");
-    } catch (error) {
-        console.error(`Error scraping page ${url}:`, error);
-        return null;
     }
 };
 

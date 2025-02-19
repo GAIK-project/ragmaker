@@ -26,3 +26,5 @@ export const scrapePage = async (url: string): Promise<string | null> => {
 
 // Example usage
 //scrapePage("https://example.com").then(console.log);
+
+//THis snippet should not be used atm for fetching semantic info as it also retains scripts and other excess information
