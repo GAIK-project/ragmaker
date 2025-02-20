@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
         // console.log("promptit: ", checkIfExists("prompts"));
         // console.log("promptit2: ", checkIfExists("prompts222"));
 
-        let testLink : string = "https://yle.fi/t/18-173265/fi";
+        let testLink : string = "https://www.mtvuutiset.fi/";
 
         let textContent = await scrapePage2(testLink);
 

@@ -52,6 +52,13 @@ const loadData = async (links: string[], assistantName: string) => {
             const content = await scrapePage(url);
             if (!content) continue;
             const chunks = await splitter.splitText(content);
+            const totalChunks = chunks.length;
+            let processedChunks = 0;
+
+            // Save total chunks to DB
+            await saveTotalChunks(assistantName, totalChunks); //////
+
+            //go thru chunks and make embeddings
             for await (const chunk of chunks) {
                 const embedding = await openai.embeddings.create({
                     model: "text-embedding-3-small",
@@ -63,8 +70,13 @@ const loadData = async (links: string[], assistantName: string) => {
                     $vector: vector,
                     text: chunk
                 });
+                processedChunks++;
                 let currentChunk : string = chunk.slice(0, 20);
-                console.log("Datachunk processed: ", currentChunk);
+
+                // Update DB with current chunk progress
+                await updateCurrentChunk(assistantName, processedChunks); //////
+
+                console.log("Datachunk processed: ", `${processedChunks}/${totalChunks}`, currentChunk);
             }
             console.log("Link processed");
         }
@@ -102,6 +114,32 @@ const markTaskCompleted = async (assistantName: string) => {
         console.log("Task marked as completed.");
     } catch (error) {
         console.error("Error updating task status:", error);
+    }
+};
+
+const saveTotalChunks = async (assistantName: string, totalChunks: number) => {
+    try {
+        const promptCollection = await db.collection(`${ASTRA_DB_PROMPT_COLLECTION}`);
+        await promptCollection.updateOne(
+            { assistantName: assistantName },
+            { $set: { totalChunks: totalChunks } }
+        );
+        console.log(`Total chunks (${totalChunks}) saved for ${assistantName}.`);
+    } catch (error) {
+        console.error("Error saving total chunk count:", error);
+    }
+};
+
+const updateCurrentChunk = async (assistantName: string, processedChunks: number) => {
+    try {
+        const promptCollection = await db.collection(`${ASTRA_DB_PROMPT_COLLECTION}`);
+        await promptCollection.updateOne(
+            { assistantName: assistantName },
+            { $set: { processedChunks: processedChunks } }
+        );
+        console.log(`Updated current chunk for ${assistantName}: ${processedChunks} processed.`);
+    } catch (error) {
+        console.error("Error updating current chunk:", error);
     }
 };
 
