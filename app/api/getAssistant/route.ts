@@ -1,12 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { DataAPIClient } from "@datastax/astra-db-ts";
+import mongoose, { ConnectOptions } from "mongoose";
 import "dotenv/config";
 import { formatDbId } from "@/app/lib/formatDbId";
 
-const { ASTRA_DB_NAMESPACE, ASTRA_DB_PROMPT_COLLECTION, ASTRA_DB_API_ENDPOINT, ASTRA_DB_APPLICATION_TOKEN } = process.env;
+const { MONGO_URI, MONGO_PROMPT_COLLECTION } = process.env;
 
-const client = new DataAPIClient(ASTRA_DB_APPLICATION_TOKEN);
-const db = client.db(ASTRA_DB_API_ENDPOINT, { namespace: ASTRA_DB_NAMESPACE });
+// Ensure a single MongoDB connection instance
+if (!mongoose.connection.readyState) {
+    mongoose.connect(MONGO_URI!, { useNewUrlParser: true, useUnifiedTopology: true } as ConnectOptions)
+        .then(() => console.log("MongoDB connected"))
+        .catch(err => console.error("MongoDB connection error:", err));
+}
+
+// Define MongoDB Schema for Prompts
+const promptSchema = new mongoose.Schema({
+    assistantName: String,
+    prompt: String,
+    timestamp: { type: Date, default: Date.now },
+    taskCompleted: { type: Boolean, default: false }
+});
+// const PromptModel = mongoose.models[MONGO_PROMPT_COLLECTION!] || mongoose.model(MONGO_PROMPT_COLLECTION!, promptSchema);
+const PromptModel = mongoose.model(MONGO_PROMPT_COLLECTION!, promptSchema);
 
 export async function GET(req: NextRequest) {
     try {
@@ -17,16 +31,10 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ message: "Missing assistantId parameter" }, { status: 400 });
         }
 
-        let newName : string = formatDbId(assistantId);
+        let newName: string = formatDbId(assistantId);
 
-        const promptCollection = await db.collection(`${ASTRA_DB_PROMPT_COLLECTION}`);
-
-        // // Find the assistant by ID
-        // const assistantData = await promptCollection.findOne({ assistantName: newName });
-        const docs = await promptCollection.find({}).toArray();
-
-        let assistantData = docs.find(entry => entry.assistantName === newName);
-        console.log(assistantData);
+        // Find the assistant by ID
+        const assistantData = await PromptModel.findOne({ assistantName: newName });
 
         if (!assistantData) {
             return NextResponse.json({ message: "No assistant found" }, { status: 404 });
@@ -36,7 +44,6 @@ export async function GET(req: NextRequest) {
             message: "Assistant retrieved",
             data: assistantData
         }, { status: 200 });
-
     } catch (error) {
         console.error("Error fetching assistant data:", error);
         return NextResponse.json({ message: "Failed to retrieve assistant data", error: error.message }, { status: 500 });

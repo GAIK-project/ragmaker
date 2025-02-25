@@ -3,10 +3,11 @@ import OpenAI from "openai";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import "dotenv/config";
 import { scrapePage } from "./autoScraper";
+import mongoose, { ConnectOptions } from "mongoose";
 
 type SimilarityMetric = "dot_product" | "cosine" | "euclidean";
 
-const { ASTRA_DB_NAMESPACE, ASTRA_DB_EMBEDDING_COLLECTION, ASTRA_DB_PROMPT_COLLECTION, ASTRA_DB_API_ENDPOINT, ASTRA_DB_APPLICATION_TOKEN, OPENAI_API_KEY } = process.env;
+const { ASTRA_DB_NAMESPACE, ASTRA_DB_EMBEDDING_COLLECTION, MONGO_URI, MONGO_PROMPT_COLLECTION, ASTRA_DB_API_ENDPOINT, ASTRA_DB_APPLICATION_TOKEN, OPENAI_API_KEY } = process.env;
 
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 const client = new DataAPIClient(ASTRA_DB_APPLICATION_TOKEN);
@@ -16,6 +17,69 @@ const splitter = new RecursiveCharacterTextSplitter({
     chunkSize: 512,
     chunkOverlap: 100
 });
+
+// Connect to MongoDB
+mongoose.connect(MONGO_URI!, { useNewUrlParser: true, useUnifiedTopology: true } as ConnectOptions)
+    .then(() => console.log("MongoDB connected"))
+    .catch(err => console.error("MongoDB connection error:", err));
+
+// Define MongoDB Schema for Prompts
+const promptSchema = new mongoose.Schema({
+    assistantName: String,
+    prompt: String,
+    timestamp: { type: Date, default: Date.now },
+    taskCompleted: { type: Boolean, default: false },
+    totalChunks: Number,
+    processedChunks: Number
+});
+const PromptModel = mongoose.model(MONGO_PROMPT_COLLECTION!, promptSchema);
+
+const createPromptEntry = async (assistantName: string, systemPrompt: string) => {
+    try {
+        const prompt = new PromptModel({ assistantName, prompt: systemPrompt, taskCompleted: false });
+        await prompt.save();
+        return { message: "System prompt saved successfully", success: true };
+    } catch (error) {
+        console.error("Error saving system prompt:", error);
+        return { message: "Failed to save system prompt", success: false };
+    }
+};
+
+const markTaskCompleted = async (assistantName: string) => {
+    try {
+        await PromptModel.findOneAndUpdate(
+            { assistantName },
+            { taskCompleted: true }
+        );
+        console.log("Task marked as completed.");
+    } catch (error) {
+        console.error("Error updating task status:", error);
+    }
+};
+
+const saveTotalChunks = async (assistantName: string, totalChunks: number) => {
+    try {
+        await PromptModel.findOneAndUpdate(
+            { assistantName },
+            { totalChunks }
+        );
+        console.log(`Total chunks (${totalChunks}) saved for ${assistantName}.`);
+    } catch (error) {
+        console.error("Error saving total chunk count:", error);
+    }
+};
+
+const updateCurrentChunk = async (assistantName: string, processedChunks: number) => {
+    try {
+        await PromptModel.findOneAndUpdate(
+            { assistantName },
+            { processedChunks }
+        );
+        console.log(`Updated current chunk for ${assistantName}: ${processedChunks} processed.`);
+    } catch (error) {
+        console.error("Error updating current chunk:", error);
+    }
+};
 
 const createCollections = async (similarityMetric: SimilarityMetric, assistantName: string) => {
     try {
@@ -33,9 +97,9 @@ const createCollections = async (similarityMetric: SimilarityMetric, assistantNa
             }
         });
 
-        if(!checkIfExists(ASTRA_DB_PROMPT_COLLECTION)){
-            await db.createCollection(`${ASTRA_DB_PROMPT_COLLECTION}`);
-        }
+        // if(!checkIfExists(ASTRA_DB_PROMPT_COLLECTION)){
+        //     await db.createCollection(`${ASTRA_DB_PROMPT_COLLECTION}`);
+        // }
         
         console.log("Collections created");
         return true;
@@ -88,70 +152,71 @@ const loadData = async (links: string[], assistantName: string) => {
     }
 };
 
-const saveSystemPrompt = async (assistantName : string, systemPrompt: string) => {
-    try {
-        const promptCollection = await db.collection(`${ASTRA_DB_PROMPT_COLLECTION}`);
-        await promptCollection.insertOne({
-            prompt: systemPrompt,
-            timestamp: new Date(),
-            taskCompleted: false, // Initially false
-            assistantName: assistantName
-        });
-        return { message: "System prompt saved successfully", success: true };
-    } catch (error) {
-        console.error("Error saving system prompt:", error);
-        return { message: "Failed to save system prompt", success: false };
-    }
-};
-
-const markTaskCompleted = async (assistantName: string) => {
-    try {
-        const promptCollection = await db.collection(`${ASTRA_DB_PROMPT_COLLECTION}`);
-        await promptCollection.updateOne(
-            { assistantName : assistantName },
-            { $set: { taskCompleted: true } }
-        );
-        console.log("Task marked as completed.");
-    } catch (error) {
-        console.error("Error updating task status:", error);
-    }
-};
-
-const saveTotalChunks = async (assistantName: string, totalChunks: number) => {
-    try {
-        const promptCollection = await db.collection(`${ASTRA_DB_PROMPT_COLLECTION}`);
-        await promptCollection.updateOne(
-            { assistantName: assistantName },
-            { $set: { totalChunks: totalChunks } }
-        );
-        console.log(`Total chunks (${totalChunks}) saved for ${assistantName}.`);
-    } catch (error) {
-        console.error("Error saving total chunk count:", error);
-    }
-};
-
-const updateCurrentChunk = async (assistantName: string, processedChunks: number) => {
-    try {
-        const promptCollection = await db.collection(`${ASTRA_DB_PROMPT_COLLECTION}`);
-        await promptCollection.updateOne(
-            { assistantName: assistantName },
-            { $set: { processedChunks: processedChunks } }
-        );
-        console.log(`Updated current chunk for ${assistantName}: ${processedChunks} processed.`);
-    } catch (error) {
-        console.error("Error updating current chunk:", error);
-    }
-};
 
 export const processLinks = async (assistantName : string, links: string[], systemPrompt: string) => {
     const collectionsCreated = await createCollections("dot_product", assistantName);
     if (!collectionsCreated) {
         return { message: "Failed to create collections", success: false };
     }
-    const promptSaved = await saveSystemPrompt(assistantName, systemPrompt);
+    const promptSaved = await createPromptEntry(assistantName, systemPrompt);
     if (!promptSaved.success) {
         console.error("Error saving prompt..retrying")
         return promptSaved;
     }
     return await loadData(links, assistantName);
 };
+
+// const saveSystemPrompt = async (assistantName : string, systemPrompt: string) => {
+//     try {
+//         const promptCollection = await db.collection(`${ASTRA_DB_PROMPT_COLLECTION}`);
+//         await promptCollection.insertOne({
+//             prompt: systemPrompt,
+//             timestamp: new Date(),
+//             taskCompleted: false, // Initially false
+//             assistantName: assistantName
+//         });
+//         return { message: "System prompt saved successfully", success: true };
+//     } catch (error) {
+//         console.error("Error saving system prompt:", error);
+//         return { message: "Failed to save system prompt", success: false };
+//     }
+// };
+
+// const markTaskCompleted = async (assistantName: string) => {
+//     try {
+//         const promptCollection = await db.collection(`${ASTRA_DB_PROMPT_COLLECTION}`);
+//         await promptCollection.updateOne(
+//             { assistantName : assistantName },
+//             { $set: { taskCompleted: true } }
+//         );
+//         console.log("Task marked as completed.");
+//     } catch (error) {
+//         console.error("Error updating task status:", error);
+//     }
+// };
+
+// const saveTotalChunks = async (assistantName: string, totalChunks: number) => {
+//     try {
+//         const promptCollection = await db.collection(`${ASTRA_DB_PROMPT_COLLECTION}`);
+//         await promptCollection.updateOne(
+//             { assistantName: assistantName },
+//             { $set: { totalChunks: totalChunks } }
+//         );
+//         console.log(`Total chunks (${totalChunks}) saved for ${assistantName}.`);
+//     } catch (error) {
+//         console.error("Error saving total chunk count:", error);
+//     }
+// };
+
+// const updateCurrentChunk = async (assistantName: string, processedChunks: number) => {
+//     try {
+//         const promptCollection = await db.collection(`${ASTRA_DB_PROMPT_COLLECTION}`);
+//         await promptCollection.updateOne(
+//             { assistantName: assistantName },
+//             { $set: { processedChunks: processedChunks } }
+//         );
+//         console.log(`Updated current chunk for ${assistantName}: ${processedChunks} processed.`);
+//     } catch (error) {
+//         console.error("Error updating current chunk:", error);
+//     }
+// };
