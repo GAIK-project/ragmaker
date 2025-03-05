@@ -123,6 +123,7 @@ export default function Home() {
     
           if (data.taskCompleted) {
             clearInterval(interval);
+            setLoading(false);
           }
         }, 10000); // Poll every 10 seconds
     }
@@ -203,7 +204,7 @@ export default function Home() {
 
                 {(loading &&
                     <div className="loader-container">
-                        <p className="loader-text">Data is being collected from the provided links and prepared to a form your AI assistant can understand... This might take 1-20 minutes depending on your data size</p>
+                        <p className="loader-text">Data is being collected from the provided links and prepared to a form your AI assistant can understand... This might take several minutes depending on your data size</p>
                         <div className="loader"></div>
                     </div>
                 )}
@@ -227,12 +228,13 @@ export default function Home() {
                         </button>
                     </Link>
                 )}
+                {/*
                     <button
                         className="create-button"
                         onClick={() => testDb()}
                     >
                         test
-                    </button>
+                     </button> */}
             </div>
         </div>
     );

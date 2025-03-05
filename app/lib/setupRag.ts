@@ -4,6 +4,8 @@ import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import "dotenv/config";
 import { scrapePage } from "./autoScraper";
 import mongoose, { ConnectOptions } from "mongoose";
+import connectToDatabase from "./../lib/db";
+import PromptModel from "./../models/Prompt";
 
 type SimilarityMetric = "dot_product" | "cosine" | "euclidean";
 
@@ -17,22 +19,6 @@ const splitter = new RecursiveCharacterTextSplitter({
     chunkSize: 512,
     chunkOverlap: 100
 });
-
-// Connect to MongoDB
-mongoose.connect(MONGO_URI!, { useNewUrlParser: true, useUnifiedTopology: true } as ConnectOptions)
-    .then(() => console.log("MongoDB connected"))
-    .catch(err => console.error("MongoDB connection error:", err));
-
-// Define MongoDB Schema for Prompts
-const promptSchema = new mongoose.Schema({
-    assistantName: String,
-    prompt: String,
-    timestamp: { type: Date, default: Date.now },
-    taskCompleted: { type: Boolean, default: false },
-    totalChunks: Number,
-    processedChunks: Number
-});
-const PromptModel = mongoose.model(MONGO_PROMPT_COLLECTION!, promptSchema);
 
 const createPromptEntry = async (assistantName: string, systemPrompt: string) => {
     try {
@@ -154,6 +140,8 @@ const loadData = async (links: string[], assistantName: string) => {
 
 
 export const processLinks = async (assistantName : string, links: string[], systemPrompt: string) => {
+    await connectToDatabase();
+    
     const collectionsCreated = await createCollections("dot_product", assistantName);
     if (!collectionsCreated) {
         return { message: "Failed to create collections", success: false };
