@@ -37,7 +37,7 @@ section.populated {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    overflow: scroll;
+    overflow-y: scroll;
 }
 
 .starter-text {
@@ -122,6 +122,30 @@ input:focus {
     background-size: calc(100%/3) 100%;
     animation: loading 1s infinite linear;
 }
+
+@media (min-width: 768px) {  /* Target devices wider than 768px (desktop) */
+    section.populated {
+        /* Firefox */
+        scrollbar-width: thin;
+        scrollbar-color: #888 #f0f0f0;
+    }
+
+    /* WebKit Browsers */
+    section.populated::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    section.populated::-webkit-scrollbar-thumb {
+        background-color: #888;
+        border-radius: 10px;
+    }
+
+    section.populated::-webkit-scrollbar-track {
+        background-color: #f0f0f0;
+    }
+}
+
 
 @keyframes loading {
     33% {background-size: calc(100%/3) 0, calc(100%/3) 100%, calc(100%/3) 100%;}

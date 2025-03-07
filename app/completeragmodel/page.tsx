@@ -53,7 +53,7 @@ const Home = () => {
                             {assistantData ? assistantData.assistantName : "Test assistant"}
                         </p>
                         <br/>
-                        <PromptSuggestionRow onPromptClick={handlePrompt}/>
+                        {/* <PromptSuggestionRow onPromptClick={handlePrompt}/> */}
                     </>
                 ) : (
                     <>
